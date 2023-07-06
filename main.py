@@ -47,25 +47,40 @@ while(True):
             kind = final_data['kind']
             schema = final_data['schema']
             columnvalues = final_data['columnvalues']
-
+            columnnames = final_data['columnnames']
             columnvalues.pop()
             del columnvalues[37]
             del columnvalues[36]
             del columnvalues[32]
-            del columnvalues[0]
+            source_id = columnvalues[0]
             columnvalues+=[None,None,None,None,None,None,None]
-            print(kind, schema, columnvalues, len(columnvalues))
+
+            result_arr = []
+            # print(message)
+            # print(kind, schema, columnvalues, len(columnvalues))
 
             # target cursor
             target_cur = target_conn.cursor()
             
             if kind == 'insert':
-                insert_sql = "INSERT INTO transaction_model(	auth_id_response, bank_code, batch_no, card_no, card_type, created_unix_time, customer_id, icc_system_data, invoice_no, is_reversal, is_settle, is_void, mid, original_transaction_date, request_amount, response_code, retrieval_ref_no, reversal_txn_id, reversal_unix_time, serial_no, settle_unix_time, signature_data, tid, tip, transaction_type, txn_id, updated_unix_time, void_txn_id, void_unix_time, card_hash, routing_bank_code, merchant_industry, pos_entry_mode, system_trace_no, is_clear_batch, transaction_id, is_offline, is_refund,	write_date,	create_date, source_type, write_uid) VALUES %s".format(schema)
+                insert_sql = "INSERT INTO transaction_model(source_id,auth_id_response, bank_code, batch_no, card_no, card_type, created_unix_time, customer_id, icc_system_data, invoice_no, is_reversal, is_settle, is_void, mid, original_transaction_date, request_amount, response_code, retrieval_ref_no, reversal_txn_id, reversal_unix_time, serial_no, settle_unix_time, signature_data, tid, tip, transaction_type, txn_id, updated_unix_time, void_txn_id, void_unix_time, card_hash, routing_bank_code, merchant_industry, pos_entry_mode, system_trace_no, is_clear_batch, transaction_id, is_offline, is_refund,	write_date,	create_date, source_type, write_uid) VALUES %s".format(schema)
                 target_cur.execute(insert_sql, [tuple(columnvalues)]) 
                 target_conn.commit()
             elif kind == 'update':
-                ...
-
+                for i in range(len(columnnames)):
+                    if columnnames[i] == 'id':
+                        continue
+                    if (columnnames[i] == "fee_percentage") | (columnnames[i] == "is_complete") | (columnnames[i] == "complete_txn_id") | (columnnames[i] == "complete_unix_time") :
+                        continue
+                    if type(columnvalues[i]) == str:
+                        result_arr.append( f"{columnnames[i]} = '{columnvalues[i]}'")
+                    else:
+                        result_arr.append( f"{columnnames[i]} = {columnvalues[i]}")
+                params = ','.join(str(x) for x in result_arr)
+                params = params.replace('None', 'null')
+                update_sql = f"UPDATE transaction_model SET {params} WHERE source_id = {source_id};"
+                # print(update_sql)
+                target_cur.execute(update_sql)
             
 else:
     source_conn.close()
